@@ -48,10 +48,14 @@ def index_files(directory):
                 print(f"Skipping: {file_path} (Invalid text metadata)")
                 continue
 
-            print(
-                f"Storing metadata for: {file_path} with text: {metadata['text']}")
+            # DEBUG: Show metadata being indexed
+            print(f"Indexing file: {file_path}")
+            print(f"Metadata: {metadata}")
 
+            # Generate embeddings
             embedding = embedding_function(metadata['text'])
+
+            # Add to collection
             collection.add(
                 documents=[metadata['text']],
                 metadatas=[metadata],
