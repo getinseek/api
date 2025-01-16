@@ -1,4 +1,4 @@
-from indexer import collection
+from api.indexer import collection
 
 
 def search_files(query):

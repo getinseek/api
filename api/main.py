@@ -1,5 +1,5 @@
-from indexer import index_files
-from query import search_files
+from api.indexer import index_files
+from api.query import search_files
 
 if __name__ == "__main__":
     print("Welcome to File Search")

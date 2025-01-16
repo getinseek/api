@@ -2,9 +2,9 @@ import os
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 from PIL import Image, ImageTk
-from indexer import index_files
-from query import search_files
-from clear_index import clear_index
+from api.indexer import index_files
+from api.query import search_files
+from api.clear_index import clear_index
 
 
 class FileSearchApp:
