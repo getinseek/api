@@ -442,6 +442,32 @@ files = [
 ]
 
 [[package]]
+name = "embed-anything"
+version = "0.5.0"
+description = "Embed anything at lightning speed"
+optional = false
+python-versions = ">=3.8"
+groups = ["main"]
+files = [
+    {file = "embed_anything-0.5.0-cp310-cp310-manylinux_2_34_x86_64.whl", hash = "sha256:6807ea781962e59bb887fffa4d4e9101a69888bde007c2cc93665ca71b014671"},
+    {file = "embed_anything-0.5.0-cp310-cp310-win_amd64.whl", hash = "sha256:25d35a514c7772834fd9edb2031bd993d853b95d927b47d5afea783739e02d83"},
+    {file = "embed_anything-0.5.0-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:befcbfcd35f9ef55c7ee863214b4da2fe92cb79b055d36c19667a444cd1ad531"},
+    {file = "embed_anything-0.5.0-cp311-cp311-manylinux_2_34_x86_64.whl", hash = "sha256:42fe49d8828f3142b34148f417651898388c5467ba15449ccc493346a2445273"},
+    {file = "embed_anything-0.5.0-cp311-cp311-win_amd64.whl", hash = "sha256:1a94e9490517ea1f329656bd90a2106bbc2913f178350922b8ca141e3a764bca"},
+    {file = "embed_anything-0.5.0-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:07c1532bb5df9ff3dbe53f2d647fe3e35c57c6b901723eced737b3738e232a51"},
+    {file = "embed_anything-0.5.0-cp312-cp312-manylinux_2_34_x86_64.whl", hash = "sha256:d65ecf6792491e9c89b5d678ce01167f07cd2ca03628ae729ccadaca75579e96"},
+    {file = "embed_anything-0.5.0-cp312-cp312-win_amd64.whl", hash = "sha256:27a87bf34cb7a43b7ac9562d3c09ace010dd3ac1dc2bc9eb400759a83f52e29e"},
+    {file = "embed_anything-0.5.0-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:b3b6bce518f49f0ed55a8eaf54638eca12e39ae234d8a69143c1abdb2aead305"},
+    {file = "embed_anything-0.5.0-cp38-cp38-win_amd64.whl", hash = "sha256:e14b625de9f999a4130a1865a7134fc518fd994395cde15bdd4508e458c7211d"},
+    {file = "embed_anything-0.5.0-cp39-cp39-manylinux_2_34_x86_64.whl", hash = "sha256:4daa4fb64b39d353d64f9d064dbd4381a83b69042b2e024176ff6074e37b0d29"},
+    {file = "embed_anything-0.5.0-cp39-cp39-win_amd64.whl", hash = "sha256:247e385a9fc1917056d19e229e78c8f81ac70ebcde5e996f3bf292087833fb32"},
+    {file = "embed_anything-0.5.0.tar.gz", hash = "sha256:592a9934bbd95c001e7310d73256ae8ff39d6475fe2e64fbc72ac1476c7599b9"},
+]
+
+[package.dependencies]
+onnxruntime = "1.20.1"
+
+[[package]]
 name = "fastapi"
 version = "0.115.6"
 description = "FastAPI framework, high performance, easy to learn, fast to code, ready for production"
@@ -3156,4 +3182,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12"
-content-hash = "84a2787a12a5f5c9e21e650313ff45863855adf5a922c1d66924e845cab0045a"
+content-hash = "c8abcc0bd74d7dfd53fc3a9cd51fc6cf4fa6966f43c39c90ba2678939f131881"
