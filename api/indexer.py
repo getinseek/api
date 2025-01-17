@@ -2,13 +2,24 @@ import os
 from chromadb.config import Settings
 from chromadb import PersistentClient
 from PIL import Image
-from transformers import BlipProcessor, BlipForConditionalGeneration
+from transformers import BlipProcessor, BlipForConditionalGeneration, AutoModelForCausalLM, AutoTokenizer
+
 import torch
 
 # Load BLIP model and processor
-device = "cuda" if torch.cuda.is_available() else "cpu"
-processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-large")
-model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-large").to(device)
+device = "mps" if torch.backends.mps.is_available() else "cuda" if torch.cuda.is_available() else "cpu"
+
+processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
+# model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base").to(device)
+model = AutoModelForCausalLM.from_pretrained(
+    "vikhyatk/moondream2",
+    revision="2025-01-09",
+    trust_remote_code=True,
+    # Uncomment to run on GPU.
+    # device_map={"": device}
+).to(device)
+
+tokenizer = AutoTokenizer.from_pretrained("vikhyatk/moondream2", revision="2025-01-09")
 
 # Set up ChromaDB client
 client = PersistentClient(
@@ -24,13 +35,9 @@ def process_image(file_path):
     """Processes an image file and generates a detailed description using BLIP."""
     try:
         # Load and preprocess the image
-        image = Image.open(file_path).convert("RGB")
-        inputs = processor(image, return_tensors="pt").to(device)
-
-        # Generate caption
-        with torch.no_grad():
-            outputs = model.generate(**inputs)
-            description = processor.decode(outputs[0], skip_special_tokens=True)
+        image = Image.open(file_path)
+        # enc_image = model.encode_image(image)
+        description = model.caption(image, "short")["caption"]
 
         return {
             "text": description,
@@ -94,5 +101,6 @@ def index_files(directory):
 
 if __name__ == "__main__":
     # Prompt user for directory to index
+    print(device)
     directory = input("Enter the path to the directory you want to index: ")
     index_files(directory)
