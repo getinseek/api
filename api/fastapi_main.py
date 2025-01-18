@@ -12,5 +12,6 @@ async def root():
 async def query_files(query_string: str):
 
     result = search_files(query_string)
+
     print(result)
     return {"files": result}

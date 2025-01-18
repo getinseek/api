@@ -4,21 +4,21 @@ from api.query import search_files
 if __name__ == "__main__":
     print("Welcome to File Search")
 
-    # Prompt user for directory to index
-    try:
-        repo_path = input(
-            "Enter the path to the directory you want to index: ")
-        if not repo_path:
-            print("No directory specified. Exiting.")
-            exit()
+    # # Prompt user for directory to index
+    # try:
+    #     repo_path = input(
+    #         "Enter the path to the directory you want to index: ")
+    #     if not repo_path:
+    #         print("No directory specified. Exiting.")
+    #         exit()
 
-        # Index the specified directory
-        print("Indexing files... This may take some time.")
-        index_files(repo_path)
-        print("Indexing complete. You can now search your files.")
-    except Exception as e:
-        print(f"Error during indexing: {e}")
-        exit()
+    #     # Index the specified directory
+    #     print("Indexing files... This may take some time.")
+    #     index_files(repo_path)
+    #     print("Indexing complete. You can now search your files.")
+    # except Exception as e:
+    #     print(f"Error during indexing: {e}")
+    #     exit()
 
     # Interactive query loop
     while True:

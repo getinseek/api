@@ -3,23 +3,33 @@ from chromadb.config import Settings
 from chromadb import PersistentClient
 from PIL import Image
 from transformers import BlipProcessor, BlipForConditionalGeneration, AutoModelForCausalLM, AutoTokenizer
+import moondream as md
+
 
 import torch
+from api.download_moondream import download_model
+
+
+
+download_model()
+
+local_model_path=os.path.join(os.getcwd(),"moondream_model","moondream-0_5b-int8.mf")
+model = md.vl(model=local_model_path)
+
 
 # Load BLIP model and processor
 device = "mps" if torch.backends.mps.is_available() else "cuda" if torch.cuda.is_available() else "cpu"
 
 processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
 # model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base").to(device)
-model = AutoModelForCausalLM.from_pretrained(
-    "vikhyatk/moondream2",
-    revision="2025-01-09",
-    trust_remote_code=True,
-    # Uncomment to run on GPU.
-    # device_map={"": device}
-).to(device)
+# model = AutoModelForCausalLM.from_pretrained(
+#     local_model_path,
+#     trust_remote_code=True,
+#     # Uncomment to run on GPU.
+#     # device_map={"": device}
+# ).to(device)
 
-tokenizer = AutoTokenizer.from_pretrained("vikhyatk/moondream2", revision="2025-01-09")
+# tokenizer = AutoTokenizer.from_pretrained(local_model_path)
 
 # Set up ChromaDB client
 client = PersistentClient(
@@ -37,10 +47,12 @@ def process_image(file_path):
         # Load and preprocess the image
         image = Image.open(file_path)
         # enc_image = model.encode_image(image)
-        description = model.caption(image, "short")["caption"]
+        caption = model.caption(image)["caption"]
+
+
 
         return {
-            "text": description,
+            "text": caption,
             "width": image.width,
             "height": image.height,
             "mode": image.mode,
@@ -92,7 +104,7 @@ def index_files(directory):
 
             # Add to collection
             collection.add(
-                documents=[metadata["text"]],
+                documents=[str(metadata)],
                 metadatas=[metadata],
                 ids=[file_path],
             )
