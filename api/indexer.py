@@ -1,7 +1,14 @@
+import mimetypes
 import os
+import pathlib
+import PyPDF2
+import chardet
 from chromadb.config import Settings
 from chromadb import PersistentClient
 from PIL import Image
+import docx
+import filetype
+
 from transformers import BlipProcessor, BlipForConditionalGeneration, AutoModelForCausalLM, AutoTokenizer
 import moondream as md
 
@@ -63,52 +70,137 @@ def process_image(file_path):
 
 
 def extract_metadata(file_path):
-    """Extracts metadata and processes files based on type."""
-    metadata = {
-        "file_name": os.path.basename(file_path),
-        "file_path": file_path,
-        "file_type": os.path.splitext(file_path)[1],
+    """
+    Extracts content from files, with special handling for images and text-based files.
+    
+    Args:
+        file_path (str): Path to the file
+        
+    Returns:
+        dict: Dictionary containing file content and metadata
+    """
+    file_path = pathlib.Path(file_path)
+    
+    mime_type = mimetypes.guess_type(str(file_path))[0]
+
+    # Base metadata
+    result = {
+        "file_name": file_path.name,
+        "file_path": str(file_path.absolute()),
+        "file_type": file_path.suffix.lower(),
+        "mime_type": mime_type,
+        "content_type": None,
+        "content": None,
+        "error": None
     }
 
-    # Process image files
-    if metadata["file_type"].lower() in [".jpg", ".png", ".jpeg"]:
-        data = process_image(file_path)
-        metadata.update(data if data else {"text": "Image processing failed"})
-    else:
-        metadata["text"] = f"Unsupported file type: {metadata['file_type']}"
+    print(mime_type)
 
-    return metadata
+    try:
+        # Image handling
+        if result["mime_type"].startswith('image/'):
+            try:
+                with Image.open(file_path) as img:
+                    # Convert image to RGB if necessary
+                    if img.mode not in ('RGB', 'RGBA'):
+                        img = img.convert('RGB')
+                    data = process_image(file_path)
+                    result["content"].update(data if data else {"text": "Image processing failed"})
+
+                    result.update({
+                        "content_type": "image",
+                        "content": {
+                            "format": img.format,
+                            "mode": img.mode,
+                            "width": img.width,
+                            "height": img.height
+                        }
+                    })
+            except Exception as e:
+                result["error"] = f"Image processing error: {str(e)}"
+
+        # Text content handling
+        else:
+            # PDF files
+            if result["file_type"] == ".pdf":
+                text_content = []
+                with open(file_path, "rb") as pdf_file:
+                    pdf_reader = PyPDF2.PdfReader(pdf_file)
+                    for page in pdf_reader.pages:
+                        text_content.append(page.extract_text())
+                result["content_type"] = "text"
+                result["content"] = "\n".join(text_content)
+
+            # Word documents
+            elif result["file_type"] in [".docx", ".doc"]:
+                doc = docx.Document(file_path)
+                result["content_type"] = "text"
+                result["content"] = "\n".join(paragraph.text for paragraph in doc.paragraphs)
+
+            # Plain text files (including .txt, .csv, .json, .xml, etc.)
+            else:
+                # Detect file encoding
+                with open(file_path, 'rb') as f:
+                    raw_data = f.read()
+                    detected = chardet.detect(raw_data)
+                    encoding = detected['encoding'] or 'utf-8'
+
+                try:
+                    with open(file_path, 'r', encoding=encoding) as f:
+                        content = f.read()
+                        result["content_type"] = "text"
+                        result["content"] = content
+                except UnicodeDecodeError:
+                    # If text reading fails, check if it might be binary data
+                    result["error"] = "File appears to be binary or uses an unsupported encoding"
+
+    except Exception as e:
+        result["error"] = str(e)
+
+    return result
 
 
 def index_files(directory):
-    """Indexes all files in the specified directory."""
+    # Process all files in directory
     for root, _, files in os.walk(directory):
         for file in files:
             file_path = os.path.join(root, file)
+            
+            try:
+                # Check if file is already indexed
+                if True:
+                    existing_ids = collection.get(ids=[file_path])
+                    if existing_ids and existing_ids["ids"]:
+                        print(f"Already indexed: {file_path}")
 
-            # Skip already indexed files
-            existing_ids = collection.get(ids=[file_path])
-            if existing_ids and existing_ids["ids"]:
-                print(f"Already indexed: {file_path}")
-                continue
+                        continue
 
-            # Extract metadata
-            metadata = extract_metadata(file_path)
-            if not metadata.get("text") or not isinstance(metadata["text"], str):
-                print(f"Skipping: {file_path} (Invalid text metadata)")
-                continue
+                # Extract content and metadata
+                metadata = extract_metadata(file_path)
+                print(metadata)
 
-            # Debug metadata
-            print(f"Indexing file: {file_path}")
-            print(f"Metadata: {metadata}")
+                # Verify valid text content
+                if not metadata.get("text") or not isinstance(metadata["text"], str):
+                    print(f"Skipping: {file_path} (Invalid text metadata)")
 
-            # Add to collection
-            collection.add(
-                documents=[str(metadata)],
-                metadatas=[metadata],
-                ids=[file_path],
-            )
-            print(f"Indexed: {file_path}")
+                    continue
+
+                # Debug output
+                print(f"Indexing file: {file_path}")
+                print(f"Metadata: {metadata}")
+
+                # Add to collection
+                collection.add(
+                    documents=[str(metadata["text"])],
+                    metadatas=[metadata],
+                    ids=[file_path],
+                )
+                print(f"Indexed: {file_path}")
+
+
+            except Exception as e:
+                print(f"Failed to process {file_path}: {str(e)}")
+
 
 
 if __name__ == "__main__":

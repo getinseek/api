@@ -2,6 +2,8 @@
 db/
 __pycache__/
 poetry.lock/
+poetry.lock
 .venv/
 moondream_model/
 moondream-*.gz
+test/
