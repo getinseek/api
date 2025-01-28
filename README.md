@@ -13,3 +13,15 @@ poetry run uvicorn api.fastapi_main:app --reload
 ```
 poetry run python api/indexer.py
 ```
+
+To index:
+
+```
+poetry run python api/test_thing.py --index DIRECTORY
+```
+
+To query:
+
+```
+poetry run python api/test_thing.py
+```
