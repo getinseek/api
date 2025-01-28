@@ -8,35 +8,53 @@ from chromadb import PersistentClient
 from PIL import Image
 import docx
 import filetype
+from transformers import pipeline
 
-from transformers import BlipProcessor, BlipForConditionalGeneration, AutoModelForCausalLM, AutoTokenizer
+from transformers import Blip2Processor, Blip2ForConditionalGeneration, BlipProcessor, BlipForConditionalGeneration, AutoModelForCausalLM, AutoTokenizer, AutoProcessor, AutoModelForVision2Seq
 import moondream as md
+from transformers.image_utils import load_image
 
 
+import ollama
 import torch
+from api.analyzer import ImageAnalyzer
 from api.download_moondream import download_model
 
 
 
-download_model()
+# download_model()
 
-local_model_path=os.path.join(os.getcwd(),"moondream_model","moondream-0_5b-int8.mf")
-model = md.vl(model=local_model_path)
+# DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 
-# Load BLIP model and processor
-device = "mps" if torch.backends.mps.is_available() else "cuda" if torch.cuda.is_available() else "cpu"
+# local_model_path=os.path.join(os.getcwd(),"moondream_model","moondream-0_5b-int8.mf")
+# model = md.vl(model=local_model_path)
 
-processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
-# model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base").to(device)
-# model = AutoModelForCausalLM.from_pretrained(
-#     local_model_path,
-#     trust_remote_code=True,
-#     # Uncomment to run on GPU.
-#     # device_map={"": device}
-# ).to(device)
 
-# tokenizer = AutoTokenizer.from_pretrained(local_model_path)
+# # Load BLIP model and processor
+# device = "mps" if torch.backends.mps.is_available() else "cuda" if torch.cuda.is_available() else "cpu"
+# # DEVICE=device
+
+# # Initialize processor and model
+# processor = AutoProcessor.from_pretrained("HuggingFaceTB/SmolVLM-256M-Instruct")
+# model = AutoModelForVision2Seq.from_pretrained(
+#     "HuggingFaceTB/SmolVLM-256M-Instruct",
+#     torch_dtype=torch.bfloat16,
+#     _attn_implementation="flash_attention_2" if DEVICE == "cuda" else "eager",
+# ).to(DEVICE)
+
+# processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-large")
+# model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-large")
+
+# processor = Blip2Processor.from_pretrained("Salesforce/blip2-itm-vit-g")
+# model = Blip2ForConditionalGeneration.from_pretrained(
+#     "Salesforce/blip2-itm-vit-g", 
+#     torch_dtype=torch.float16
+# )
+
+# # Move to GPU if available
+# device = "mps" if torch.mps.is_available() else "cpu"
+# model.to(device)
 
 # Set up ChromaDB client
 client = PersistentClient(
@@ -48,15 +66,34 @@ client = PersistentClient(
 collection = client.get_or_create_collection(name="files")
 
 
+
 def process_image(file_path):
     """Processes an image file and generates a detailed description using BLIP."""
     try:
         # Load and preprocess the image
+
         image = Image.open(file_path)
-        # enc_image = model.encode_image(image)
-        caption = model.caption(image)["caption"]
 
 
+        
+       
+
+        # captioner = pipeline("image-to-text", model="Salesforce/blip-image-captioning-large")
+        # caption = captioner(image)
+
+        # inputs = processor(image, "a photography of", return_tensors="pt")
+        # outputs = model.generate(**inputs, max_new_tokens=100)
+        # caption = processor.decode(outputs[0], skip_special_tokens=True)
+
+        analyzer = ImageAnalyzer()
+        caption = analyzer.get_summary(file_path)
+
+        ## [{'generated_text': 'two birds are standing next to each other '}]
+
+
+        # caption = caption[0]['generated_text']
+
+        print(caption)
 
         return {
             "text": caption,
@@ -105,7 +142,7 @@ def extract_metadata(file_path):
                     if img.mode not in ('RGB', 'RGBA'):
                         img = img.convert('RGB')
                     data = process_image(file_path)
-                    result["content"].update(data if data else {"text": "Image processing failed"})
+                    result["content"] = data if data else {"text": "Image processing failed"}
 
                     result.update({
                         "content_type": "image",
@@ -113,7 +150,8 @@ def extract_metadata(file_path):
                             "format": img.format,
                             "mode": img.mode,
                             "width": img.width,
-                            "height": img.height
+                            "height": img.height,
+                            "text": data["text"]
                         }
                     })
             except Exception as e:
@@ -180,19 +218,19 @@ def index_files(directory):
                 print(metadata)
 
                 # Verify valid text content
-                if not metadata.get("text") or not isinstance(metadata["text"], str):
+                if not metadata['content']['text'] or not isinstance(metadata["content"]["text"], str):
                     print(f"Skipping: {file_path} (Invalid text metadata)")
 
                     continue
 
                 # Debug output
                 print(f"Indexing file: {file_path}")
-                print(f"Metadata: {metadata}")
+                print(f"Metadata: {type(metadata)}")
 
                 # Add to collection
                 collection.add(
-                    documents=[str(metadata["text"])],
-                    metadatas=[metadata],
+                    documents=[str(metadata)],
+                    metadatas=[{"info":str(metadata)}],
                     ids=[file_path],
                 )
                 print(f"Indexed: {file_path}")
@@ -205,6 +243,6 @@ def index_files(directory):
 
 if __name__ == "__main__":
     # Prompt user for directory to index
-    print(device)
+    # print(device)
     directory = input("Enter the path to the directory you want to index: ")
     index_files(directory)

@@ -7,3 +7,4 @@ poetry.lock
 moondream_model/
 moondream-*.gz
 test/
+photo_vectors/

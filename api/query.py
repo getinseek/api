@@ -1,3 +1,4 @@
+import json
 from typing import List, Dict, Optional
 from api.indexer import collection
 import logging
@@ -51,6 +52,7 @@ def search_files(
             all_items["metadatas"],
             all_items["ids"]
         )):
+            metadata = ast.literal_eval(metadata["info"])
             # Skip if file type filter is active and file doesn't match
             if file_types and metadata["file_type"].lower() not in file_types:
                 continue
@@ -87,8 +89,8 @@ def calculate_relevance(query: str, metadata: Dict) -> float:
     score = 0.0
     
     # Check image description/caption
-    if "text" in metadata and isinstance(metadata["text"], str):
-        text = metadata["text"].lower()
+    if "text" in metadata["content"] and isinstance(metadata["content"]["text"], str):
+        text = metadata["content"]["text"].lower()
         # Exact match in description
         if query in text:
             score += 0.6
@@ -122,11 +124,11 @@ def format_search_result(result: SearchResult) -> Dict:
     """
     return {
         "file_path": result.file_path,
-        "file_name": result.metadata["file_name"],
-        "file_type": result.metadata["file_type"],
-        "description": result.metadata.get("text", "No description available"),
-        "dimensions": f"{result.metadata.get('width', 'N/A')}x{result.metadata.get('height', 'N/A')}"
-        if "width" in result.metadata and "height" in result.metadata
+        "file_name": result["file_name"],
+        "file_type": result["file_type"],
+        "description": result.metadata["content"].get("text", "No description available"),
+        "dimensions": f"{result.metadata["content"].get('width', 'N/A')}x{result.metadata["content"].get('height', 'N/A')}"
+        if "width" in result.metadata["content"] and "height" in result.metadata["content"]
         else "N/A",
         "relevance_score": f"{result.relevance_score:.2f}"
     }
