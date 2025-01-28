@@ -8,3 +8,4 @@ moondream_model/
 moondream-*.gz
 test/
 photo_vectors/
+universal_vectors/
