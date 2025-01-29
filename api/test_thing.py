@@ -17,20 +17,37 @@ model, preprocess = clip.load("ViT-B/32", device=DEVICE)
 
 # Initialize ChromaDB with cosine similarity
 print("Initializing ChromaDB...")
-client = chromadb.PersistentClient(path="photo_vectors")
+client = chromadb.PersistentClient(path="db")
 collection = client.get_or_create_collection(
     name="photos",
     metadata={"hnsw:space": "cosine"}  # Explicitly set cosine similarity
 )
 
+SKIP_DIRS = {
+    'Library',
+    '.Trash',
+    'System',
+    '.git',
+    'node_modules',
+    '.cache',
+    '__pycache__',
+    'Applications',
+    'Pictures Library.photoslibrary'  # Skip Photos app library structure
+}
+
 def find_images(directory):
-    """Recursively find image files in a directory."""
+    """Recursively find image files in a directory, skipping macOS system and app folders."""
     image_paths = []
-    for root, _, files in os.walk(directory):
+    for root, dirs, files in os.walk(directory):
+        # Skip hidden directories and system folders
+        dirs[:] = [d for d in dirs if not d.startswith('.') and d not in SKIP_DIRS]
+        
         for file in files:
-            if Path(file).suffix.lower() in IMAGE_EXTENSIONS:
-                print("Found image: ", os.path.join(root, file))
-                image_paths.append(os.path.join(root, file))
+            # Skip hidden files
+            if not file.startswith('.'):
+                if Path(file).suffix.lower() in IMAGE_EXTENSIONS:
+                    print("Found image:", os.path.join(root, file))
+                    image_paths.append(os.path.join(root, file))
     return image_paths
 
 def generate_embedding(image_path):
@@ -52,6 +69,7 @@ def index_images(directory):
 
     embeddings, ids, metadatas = [], [], []
     for image_path in image_paths:
+        print(f"Indexing {image_path}...")
         embedding = generate_embedding(image_path)
         if embedding is not None:
             embeddings.append(embedding.tolist())
