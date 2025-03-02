@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from api.query import search_files
+from api.test_thing import search_images
 import os
 
 app = FastAPI()
@@ -20,7 +20,7 @@ async def search_page():
 @app.get("/query")
 async def query_files(query_string: str):
 
-    result = search_files(query_string)
+    result = search_images(query_string)
 
     print(result)
     return {"files": result}
@@ -28,7 +28,7 @@ async def query_files(query_string: str):
 @app.get("/api/search")
 async def search_endpoint(q: str):
     try:
-        results = search_files(q)
+        results = search_images(q)
         formatted_results = []
         
         for result in results:
