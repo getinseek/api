@@ -36,6 +36,7 @@ dependencies = [
     "pymupdf (>=1.25.2,<2.0.0)",
     "pdf2image (>=1.17.0,<2.0.0)",
     "python-magic>=0.4.27",
+    "sentence-transformers>=3.4.1",
 ]
 
 
