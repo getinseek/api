@@ -1,0 +1,60 @@
+Metadata-Version: 2.2
+Name: api
+Version: 0.1.0
+Author-email: Shubham Patil <shubhampatilsd@gmail.com>, Ishaan Awasthi <ishaanawasthi05@gmail.com>
+Requires-Python: <4.0,>=3.12
+Description-Content-Type: text/markdown
+Requires-Dist: chromadb<0.7.0,>=0.6.3
+Requires-Dist: pillow<12.0.0,>=10.4.0
+Requires-Dist: transformers<4.48.0,>=4.21.0
+Requires-Dist: torch<3.0.0,>=2.5.1
+Requires-Dist: customtkinter<6.0.0,>=5.2.2
+Requires-Dist: fastapi<0.116.0,>=0.115.6
+Requires-Dist: uvicorn<0.35.0,>=0.34.0
+Requires-Dist: embed-anything<0.6.0,>=0.5.0
+Requires-Dist: einops<0.9.0,>=0.8.0
+Requires-Dist: pyvips<3.0.0,>=2.2.3
+Requires-Dist: pyvips-binary<9.0.0,>=8.16.0
+Requires-Dist: moondream==0.0.5
+Requires-Dist: python-docx<2.0.0,>=1.1.2
+Requires-Dist: pypdf2<4.0.0,>=3.0.1
+Requires-Dist: chardet<6.0.0,>=5.2.0
+Requires-Dist: filetype<2.0.0,>=1.2.0
+Requires-Dist: ollama<0.5.0,>=0.4.7
+Requires-Dist: torchvision<0.21.0,>=0.20.1
+Requires-Dist: pytesseract<0.4.0,>=0.3.13
+Requires-Dist: opencv-python<5.0.0.0,>=4.11.0.86
+Requires-Dist: numpy<3.0.0,>=2.2.2
+Requires-Dist: scikit-learn<2.0.0,>=1.6.1
+Requires-Dist: timm<2.0.0,>=1.0.14
+Requires-Dist: clip@ git+https://github.com/openai/CLIP.git
+Requires-Dist: pymupdf<2.0.0,>=1.25.2
+Requires-Dist: pdf2image<2.0.0,>=1.17.0
+
+# inseek
+
+## Installation and running
+
+```
+poetry env use 3.12
+poetry install
+poetry run uvicorn api.fastapi_main:app --reload
+```
+
+## Re-indexing Dev Method
+
+```
+poetry run python api/indexer.py
+```
+
+To index:
+
+```
+poetry run python api/test_thing.py --index DIRECTORY
+```
+
+To query:
+
+```
+poetry run python api/test_thing.py
+```

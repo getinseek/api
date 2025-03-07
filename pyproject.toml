@@ -35,17 +35,13 @@ dependencies = [
     "clip @ git+https://github.com/openai/CLIP.git",
     "pymupdf (>=1.25.2,<2.0.0)",
     "pdf2image (>=1.17.0,<2.0.0)",
+    "python-magic>=0.4.27",
 ]
 
-[tool.poetry]
-packages = [
-    { include = "api" }
-]
-
-[tool.poetry.scripts]
-start = "api.run:main"
 
 
-[build-system]
-requires = ["poetry-core>=2.0.0,<3.0.0"]
-build-backend = "poetry.core.masonry.api"
+
+
+
+[tool.setuptools]
+py-modules = []

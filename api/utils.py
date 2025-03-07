@@ -1,11 +1,14 @@
+import mimetypes
 import os
 import argparse
 from pathlib import Path
+
 import torch
 import clip
 from PIL import Image
 import chromadb
 import numpy as np
+import magic
 
 # Constants
 IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".heic"]
@@ -35,20 +38,62 @@ SKIP_DIRS = {
     'Pictures Library.photoslibrary'  # Skip Photos app library structure
 }
 
-def find_images(directory):
+def handle_applications(file_path):
+    file_type = magic.from_file(file_path, mime=True)
+    if file_type.startswith('application/pdf'):
+            print("Handling PDF document...")
+            # Add PDF-specific processing here
+            return True
+            
+    elif file_type.startswith('application/msword') or file_type.startswith('application/vnd.openxmlformats-officedocument.wordprocessingml'):
+        print("Handling Word document...")
+        # Add Word document processing here
+        return True
+        
+    elif file_type.startswith('application/vnd.ms-excel') or file_type.startswith('application/vnd.openxmlformats-officedocument.spreadsheetml'):
+        print("Handling Excel spreadsheet...")
+        # Add Excel-specific processing here
+        return True
+
+def find_files(directory):
     """Recursively find image files in a directory, skipping macOS system and app folders."""
     image_paths = []
+    audio_paths = []
+    video_paths = []
+    pdf_paths = []
+    docx_paths = []
+    txt_paths = []
     for root, dirs, files in os.walk(directory):
         # Skip hidden directories and system folders
         dirs[:] = [d for d in dirs if not d.startswith('.') and d not in SKIP_DIRS]
         
         for file in files:
             # Skip hidden files
+            fileType = magic.Magic(mime=True)
+            mime = fileType.from_file(os.path.join(root, file))
             if not file.startswith('.'):
-                if Path(file).suffix.lower() in IMAGE_EXTENSIONS:
+                if mime.startswith("text/"):
+                    txt_paths.append(os.path.join(root, file))
+                if mime.startswith("image/"):
                     print("Found image:", os.path.join(root, file))
                     image_paths.append(os.path.join(root, file))
+                if mime.startswith("video/"):
+                    video_paths.append(os.path.join(root, file))
+                if mime.startswith("audio/"):
+                    audio_paths.append(os.path.join(root, file))
+                if mime.startswith("application/"):
+                    audio_paths.append(os.path.join(root, file))
+           
+           
+           
+                
+
+
     return image_paths
+
+def is_plaintext(file_path):
+    mime = mimetypes.guess_type(file_path)[0]
+    return mime is not None and mime.startswith("text/")
 
 def generate_embedding(image_path):
     """Generate a normalized embedding for an image."""
@@ -62,9 +107,9 @@ def generate_embedding(image_path):
         print(f"Skipping {image_path}: {str(e)}")
         return None
 
-def index_images(directory):
+def index_files(directory):
     """Index images with error handling and overwrite existing entries."""
-    image_paths = find_images(directory)
+    image_paths = find_files(directory)
     print(f"Found {len(image_paths)} images. Processing...")
 
     embeddings, ids, metadatas = [], [], []
@@ -105,7 +150,7 @@ def main():
     args = parser.parse_args()
 
     if args.index:
-        index_images(args.index)
+        index_files(args.index)
 
     while True:
         query = input("Enter search query (or 'exit' to quit): ").strip()
