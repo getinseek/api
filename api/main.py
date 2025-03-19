@@ -5,7 +5,7 @@ from fastapi.templating import Jinja2Templates
 import uvicorn
 from api.utils import search_images
 import os
-
+import mimetypes
 
 app = FastAPI()
 
@@ -53,7 +53,7 @@ async def search_endpoint(q: str):
 @app.get("/api/image")
 async def get_image(path: str):
     """Serve image files."""
-    if os.path.exists(path) and path.lower().endswith(('.png', '.jpg', '.jpeg')):
+    if os.path.exists(path) and mimetypes.guess_type(path)[0].startswith('image'):
         return FileResponse(path)
     return {"error": "Image not found"}
 
