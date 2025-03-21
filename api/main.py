@@ -4,13 +4,42 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 import uvicorn
 from api.utils import search_images
+from api.watcher import FileWatcher
 import os
 import mimetypes
+import threading
 
 app = FastAPI()
+file_watcher = None
+
+def start_file_watcher():
+    global file_watcher
+
+    # Watch the user's home directory
+    watch_dir = os.path.expanduser("~")
+    file_watcher = FileWatcher(watch_dir)
+    
+    try:
+        file_watcher.watch()
+    except Exception as e:
+        print(f"Error in file watcher: {str(e)}")
+        if file_watcher:
+            file_watcher.stop()
 
 def start():
-    uvicorn.run("main:app", host="0.0.0.0", port=8008, reload=True)
+    # Start the file watcher in a separate thread
+    watcher_thread = threading.Thread(target=start_file_watcher, daemon=True)
+    watcher_thread.start()
+    
+    print("Starting FastAPI server...")
+    # Start the FastAPI server
+    uvicorn.run("api.main:app", host="0.0.0.0", port=8008, reload=True)
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    global file_watcher
+    if file_watcher:
+        file_watcher.stop()
 
 @app.get("/")
 async def root():
@@ -22,11 +51,19 @@ async def search_page():
 
 @app.get("/query")
 async def query_files(query_string: str):
-
     result = search_images(query_string)
-
-    print(result)
-    return {"files": result}
+    
+    # Format the results to match the expected structure
+    formatted_results = []
+    if result["metadatas"]:  # Check if we have any results
+        for metadata, distance in zip(result["metadatas"], result["distances"]):
+            formatted_results.append({
+                "file_path": metadata["file_path"],
+                "file_name": metadata.get("file_name", os.path.basename(metadata["file_path"])),
+                "distance": float(distance)
+            })
+    
+    return {"files": formatted_results}
 
 @app.get("/api/search")
 async def search_endpoint(q: str):
@@ -34,21 +71,18 @@ async def search_endpoint(q: str):
         results = search_images(q)
         formatted_results = []
         
-        for result in results:
-            dimensions = f"{result.metadata.get('width', 'N/A')}x{result.metadata.get('height', 'N/A')}" if result.metadata.get('width') else "N/A"
-            
-            formatted_results.append({
-                "file_path": result.file_path,
-                "file_name": result.metadata.get("file_name", "Unknown"),
-                "description": result.metadata.get("text", "No description available"),
-                "dimensions": dimensions,
-                "score": f"{result.relevance_score:.2f}",
-                "image_url": f"/api/image?path={result.file_path}"
-            })
-            
-        return {"results": formatted_results}
+        if results["metadatas"]:  # Check if we have any results
+            for metadata, distance in zip(results["metadatas"], results["distances"]):
+                formatted_results.append({
+                    "file_path": metadata["file_path"],
+                    "file_name": metadata.get("file_name", os.path.basename(metadata["file_path"])),
+                    "distance": float(distance)
+                })
+        
+        return formatted_results
     except Exception as e:
-        return {"error": str(e)}
+        print(f"Error in search endpoint: {str(e)}")
+        return []
 
 @app.get("/api/image")
 async def get_image(path: str):
@@ -64,90 +98,43 @@ search_html = '''
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>File Search</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.13.5/cdn.min.js" defer></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.js"></script>
-    <style>
-        .image-container {
-            width: 300px;
-            height: 300px;
-            position: relative;
-            overflow: hidden;
-        }
-        .image-container img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            object-position: center;
-        }
-        .hover-zoom {
-            transition: transform 0.3s ease;
-        }
-        .hover-zoom:hover {
-            transform: scale(1.05);
-        }
-    </style>
+    <title>Image Search</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
 <body class="bg-gray-100 min-h-screen">
     <div x-data="searchApp()" class="container mx-auto px-4 py-8">
         <div class="max-w-5xl mx-auto">
             <h1 class="text-3xl font-bold text-center mb-8">Image Search</h1>
             
-            <!-- Search Form -->
+            <!-- Search Input -->
             <div class="mb-8">
-                <div class="flex gap-4">
-                    <input 
-                        type="text" 
-                        x-model="searchQuery" 
-                        @keyup.enter="performSearch"
-                        placeholder="Enter search term..."
-                        class="flex-1 p-3 border rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                    >
-                    <button 
-                        @click="performSearch"
-                        class="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                        :disabled="isLoading"
-                    >
-                        <span x-show="!isLoading">Search</span>
-                        <span x-show="isLoading">Searching...</span>
-                    </button>
-                </div>
+                <input
+                    type="text"
+                    x-model="searchQuery"
+                    @input.debounce.300ms="performSearch()"
+                    placeholder="Search images..."
+                    class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
             </div>
 
             <!-- Loading State -->
             <div x-show="isLoading" class="text-center py-8">
-                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+                <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-gray-300 border-t-blue-500"></div>
             </div>
 
-            <!-- Error Message -->
-            <div x-show="error" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
-                <span class="block sm:inline" x-text="error"></span>
-            </div>
+            <!-- Error State -->
+            <div x-show="error" class="text-center py-8 text-red-500" x-text="error"></div>
 
-            <!-- Results -->
-            <div x-show="results.length > 0" class="space-y-6">
+            <!-- Results Grid -->
+            <div x-show="!isLoading && results.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <template x-for="result in results" :key="result.file_path">
-                    <div class="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
-                        <div class="flex flex-col md:flex-row gap-6">
-                            <!-- Image Container with fixed dimensions -->
-                            <div class="image-container flex-shrink-0 rounded-lg shadow-sm overflow-hidden">
-                                <img 
-                                    :src="result.image_url" 
-                                    :alt="result.file_name"
-                                    class="hover-zoom"
-                                    @error="handleImageError($event)"
-                                >
-                            </div>
-                            
-                            <!-- Content Container -->
-                            <div class="flex-1 min-w-0">
-                                <h3 class="text-lg font-semibold truncate" x-text="result.file_name"></h3>
-                                <p class="text-gray-600 mt-2 line-clamp-3" x-text="result.description"></p>
-                                <div class="mt-3 grid grid-cols-2 gap-4 text-sm text-gray-500">
-                                    <span x-text="'Dimensions: ' + result.dimensions"></span>
-                                    <span x-text="'Score: ' + result.score"></span>
-                                </div>
-                                <div class="mt-2">
+                    <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                        <img :src="result.image_url" class="w-full h-48 object-cover">
+                        <div class="p-4">
+                            <div class="flex items-start justify-between">
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-sm font-medium text-gray-900 truncate" x-text="result.file_name"></p>
                                     <p class="text-sm text-gray-500 truncate" x-text="result.file_path"></p>
                                 </div>
                             </div>
@@ -171,33 +158,33 @@ search_html = '''
                 isLoading: false,
                 error: null,
 
-                handleImageError(event) {
-                    event.target.src = 'https://via.placeholder.com/300x300?text=Image+Not+Found';
-                },
-
                 async performSearch() {
-                    if (!this.searchQuery.trim()) return;
-                    
+                    if (!this.searchQuery.trim()) {
+                        this.results = [];
+                        return;
+                    }
+
                     this.isLoading = true;
                     this.error = null;
-                    this.results = [];
 
                     try {
                         const response = await fetch(`/api/search?q=${encodeURIComponent(this.searchQuery)}`);
                         const data = await response.json();
-                        
+
                         if (data.error) {
                             this.error = data.error;
+                            this.results = [];
                         } else {
                             this.results = data.results;
                         }
                     } catch (err) {
-                        this.error = 'An error occurred while searching. Please try again.';
+                        this.error = 'An error occurred while searching';
+                        this.results = [];
                     } finally {
                         this.isLoading = false;
                     }
                 }
-            }
+            };
         }
     </script>
 </body>

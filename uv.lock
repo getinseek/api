@@ -144,8 +144,10 @@ dependencies = [
     { name = "pytesseract" },
     { name = "python-docx" },
     { name = "python-magic" },
+    { name = "python-multipart" },
     { name = "pyvips" },
     { name = "pyvips-binary" },
+    { name = "pywatchman" },
     { name = "scikit-learn" },
     { name = "sentence-transformers" },
     { name = "soundfile" },
@@ -184,8 +186,10 @@ requires-dist = [
     { name = "pytesseract", specifier = ">=0.3.13,<0.4.0" },
     { name = "python-docx", specifier = ">=1.1.2,<2.0.0" },
     { name = "python-magic", specifier = ">=0.4.27" },
+    { name = "python-multipart", specifier = ">=0.0.20" },
     { name = "pyvips", specifier = ">=2.2.3,<3.0.0" },
     { name = "pyvips-binary", specifier = ">=8.16.0,<9.0.0" },
+    { name = "pywatchman", specifier = ">=2.0.0" },
     { name = "scikit-learn", specifier = ">=1.6.1,<2.0.0" },
     { name = "sentence-transformers", specifier = ">=3.4.1" },
     { name = "soundfile", specifier = ">=0.13.1" },
@@ -2331,6 +2335,7 @@ sdist = { url = "https://files.pythonhosted.org/packages/06/47/b61c1c44b87cbdaee
 wheels = [
     { url = "https://files.pythonhosted.org/packages/61/9b/98ef4b98309e9db3baa9fe572f0e61b6130bb9852d13189970f35b703499/pymupdf-1.25.3-cp39-abi3-macosx_10_9_x86_64.whl", hash = "sha256:96878e1b748f9c2011aecb2028c5f96b5a347a9a91169130ad0133053d97915e", size = 19343576 },
     { url = "https://files.pythonhosted.org/packages/14/62/4e12126db174c8cfbf692281cda971cc4046c5f5226032c2cfaa6f83e08d/pymupdf-1.25.3-cp39-abi3-macosx_11_0_arm64.whl", hash = "sha256:6ef753005b72ebfd23470f72f7e30f61e21b0b5e748045ec5b8f89e6e3068d62", size = 18580114 },
+    { url = "https://files.pythonhosted.org/packages/ec/c5/cf7ecf005e4f8ba3664d6aaa0613adeba4c2ab524832c452c69857e7184f/pymupdf-1.25.3-cp39-abi3-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:cbff443d899f37b17f1e67563cc03673d50b4bf33ccc237e73d34f18f3a07ccf", size = 19442580 },
     { url = "https://files.pythonhosted.org/packages/52/de/bd1418e31f73d37b8381cd5deacfd681e6be702b8890e123e83724569ee1/pymupdf-1.25.3-cp39-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:46d90c4f9e62d1856e8db4b9f04a202ff4a7f086a816af73abdc86adb7f5e25a", size = 19999825 },
     { url = "https://files.pythonhosted.org/packages/42/ee/3c449b0de061440ba1ac984aa845315e9e2dca0ff2003c5adfc6febff203/pymupdf-1.25.3-cp39-abi3-musllinux_1_2_x86_64.whl", hash = "sha256:a5de51efdbe4d486b6c1111c84e8a231cbfb426f3d6ff31ab530ad70e6f39756", size = 21123157 },
     { url = "https://files.pythonhosted.org/packages/83/53/71faaaf91c56f2883b13f3dd849bf2697f012eb35eb7b952d62734cff41f/pymupdf-1.25.3-cp39-abi3-win32.whl", hash = "sha256:bca72e6089f985d800596e22973f79cc08af6cbff1d93e5bda9248326a03857c", size = 15094211 },
@@ -2436,6 +2441,15 @@ wheels = [
 ]
 
 [[package]]
+name = "python-multipart"
+version = "0.0.20"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/f3/87/f44d7c9f274c7ee665a29b885ec97089ec5dc034c7f3fafa03da9e39a09e/python_multipart-0.0.20.tar.gz", hash = "sha256:8dd0cab45b8e23064ae09147625994d090fa46f5b0d1e13af944c331a7fa9d13", size = 37158 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/45/58/38b5afbc1a800eeea951b9285d3912613f2603bdf897a4ab0f4bd7f405fc/python_multipart-0.0.20-py3-none-any.whl", hash = "sha256:8a62d3a8335e06589fe01f2a3e178cdcc632f3fbe0d492ad9ee0ec35aab1f104", size = 24546 },
+]
+
+[[package]]
 name = "pytz"
 version = "2025.1"
 source = { registry = "https://pypi.org/simple" }
@@ -2470,6 +2484,15 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/f8/af/42d5fe4e35611d777097c0c07cea5aeb924495be33117e5f6bde3bbe874f/pyvips_binary-8.16.0-cp37-abi3-musllinux_1_2_x86_64.whl", hash = "sha256:0d39f4d94afa52b524c05360040ce0fdb289f15927d950e92fa97d9e469823bc", size = 7328407 },
     { url = "https://files.pythonhosted.org/packages/04/59/bf36f525fa832a494aa54327389139f54232a10bf27a747ec76099f8c9e4/pyvips_binary-8.16.0-cp37-abi3-win32.whl", hash = "sha256:e344886ea240cd4d245b4f4fc81ab646ee9133594ad0d66004981771aa397a6a", size = 7929195 },
     { url = "https://files.pythonhosted.org/packages/eb/37/57aa667ec9e3412df827645d4e68b19af72b7354c682fd09786495e58dbd/pyvips_binary-8.16.0-cp37-abi3-win_amd64.whl", hash = "sha256:576fdb1442d971a0fe832b484b0d751a530e0e96bcd9bf9c78224556c370e96b", size = 7922661 },
+]
+
+[[package]]
+name = "pywatchman"
+version = "2.0.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/cf/39/fc10dd952ac72a3a293936cd66a4551fdeb9012d2db99234a376100641ce/pywatchman-2.0.0.tar.gz", hash = "sha256:25354d9e3647f94411a4c13e510c83a1ceecc17977b0525ba41b16e7019c7b0c", size = 40570 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/51/7f/5d68d803489770cffa5d2b44be99b978c866f8a4d8e835f9da850415ed8a/pywatchman-2.0.0-cp312-cp312-macosx_14_0_arm64.whl", hash = "sha256:51c2b4c72bea6b9fd90caf20759f5bc47febf0fd27bf2f247b87c66e2f6bab02", size = 52557 },
 ]
 
 [[package]]
