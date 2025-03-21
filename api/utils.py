@@ -20,10 +20,16 @@ model, preprocess = clip.load("ViT-B/32", device=DEVICE)
 # Initialize ChromaDB with cosine similarity
 print("Initializing ChromaDB...")
 client = chromadb.PersistentClient(path="db")
-collection = client.get_or_create_collection(
-    name="photos",
-    metadata={"hnsw:space": "cosine"}  # Explicitly set cosine similarity
-)
+
+def get_collection():
+    """Get a fresh instance of the ChromaDB collection."""
+    return client.get_or_create_collection(
+        name="photos",
+        metadata={"hnsw:space": "cosine"}  # Explicitly set cosine similarity
+    )
+
+# Initial collection instance
+collection = get_collection()
 
 SKIP_DIRS = {
     'Library',
@@ -109,7 +115,7 @@ def index_images(directory):
             embeddings.append(embedding.tolist())
             ids.append(image_path)
             metadatas.append({
-                "file_path": image_path,
+                "file_path": os.path.abspath(image_path),
                 "file_name": os.path.basename(image_path),
                 "width": width,
                 "height": height,
@@ -118,7 +124,7 @@ def index_images(directory):
     
     if embeddings:
         # Upsert to replace existing entries
-        collection.upsert(ids=ids, embeddings=embeddings, metadatas=metadatas)
+        get_collection().upsert(ids=ids, embeddings=embeddings, metadatas=metadatas)
         print(f"Indexed {len(embeddings)} images.")
 
 def encode_text_query(query):
@@ -133,61 +139,47 @@ def search_images(query, n_results=5):
     """Search with normalized embeddings and adjust ranking based on image size."""
     query_embedding = encode_text_query(query)
     
-    # First get the total count of images in the collection
     try:
-        all_results = collection.get()
-        if not all_results['ids']:
-            return {"ids": [], "metadatas": [], "distances": []}
-    except Exception as e:
-        print(f"Error getting collection: {str(e)}")
-        return {"ids": [], "metadatas": [], "distances": []}
-    
-    # Perform the search
-    try:
-        # Get more results than needed to allow for reranking
-        n_search = min(n_results * 3, len(all_results['ids']))
-        results = collection.query(
+        # Get more results than needed to allow for filtering
+        results = get_collection().query(
             query_embeddings=[query_embedding.tolist()],
-            n_results=n_search,
+            n_results=n_results * 3,  # Get extra results for filtering
             include=["metadatas", "distances"]
         )
         
+        # Check if we have valid results
+        if not results or 'metadatas' not in results or not results['metadatas']:
+            print("No results found")
+            return {"files": []}
+            
+        metadatas = results.get('metadatas', [[]])[0]
+        distances = results.get('distances', [[]])[0]
+        
+        if not metadatas or not distances:
+            print("No valid metadata or distances")
+            return {"files": []}
+            
         # Filter and rerank results
         valid_results = []
-        for i, (metadata, distance) in enumerate(zip(results['metadatas'][0], results['distances'][0])):
-            if not os.path.exists(metadata['file_path']):
-                continue
+        for metadata, distance in zip(metadatas, distances):
+            if metadata and 'file_path' in metadata:
+                file_path = metadata['file_path']
+                if os.path.exists(file_path):
+                    valid_results.append({
+                        "file_path": file_path,
+                        "file_name": metadata.get('file_name', os.path.basename(file_path)),
+                        "distance": float(distance)
+                    })
                 
-            # Get the size score
-            size_score = metadata.get('size_score', 0)
-            
-            # Combine CLIP similarity with size score
-            # Convert distance to similarity (1 - distance) and weight it with size
-            similarity = 1 - distance
-            adjusted_score = similarity * (0.7 + 0.3 * (size_score / 20))  # Adjust weights as needed
-            
-            valid_results.append({
-                'index': i,
-                'metadata': metadata,
-                'distance': distance,
-                'adjusted_score': adjusted_score
-            })
-        
-        # Sort by adjusted score and take top n_results
-        valid_results.sort(key=lambda x: x['adjusted_score'], reverse=True)
+        # Sort by distance and take top n_results
+        valid_results.sort(key=lambda x: x['distance'])
         valid_results = valid_results[:n_results]
         
-        # Format the results
-        filtered_results = {
-            "ids": [results['ids'][0][r['index']] for r in valid_results],
-            "metadatas": [r['metadata'] for r in valid_results],
-            "distances": [r['distance'] for r in valid_results]
-        }
+        return {"files": valid_results}
         
-        return filtered_results
     except Exception as e:
         print(f"Error searching images: {str(e)}")
-        return {"ids": [], "metadatas": [], "distances": []}
+        return {"files": []}
 
 def main():
     parser = argparse.ArgumentParser(description="Photo search with CLIP")
@@ -205,8 +197,8 @@ def main():
             break
         if query:
             results = search_images(query, args.n_results)
-            for metadata, distance in zip(results["metadatas"], results["distances"]):
-                print(f"Distance: {distance:.3f} | Path: {metadata['file_path']}")
+            for file in results["files"]:
+                print(f"Distance: {file['distance']:.3f} | Path: {file['file_path']}")
         else:
             print("Please enter a valid query.")
 

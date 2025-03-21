@@ -6,7 +6,7 @@ import mimetypes
 from typing import Optional, Set
 from PIL import Image
 import math
-from .utils import generate_embedding, collection, SKIP_DIRS, MIN_IMAGE_SIZE
+from .utils import generate_embedding, get_collection, SKIP_DIRS, MIN_IMAGE_SIZE
 
 class ImageHandler(FileSystemEventHandler):
     def __init__(self, watch_dir: str):
@@ -17,9 +17,10 @@ class ImageHandler(FileSystemEventHandler):
         """Check if the file is a valid image and not in a skip directory."""
         if any(skip_dir in file_path for skip_dir in SKIP_DIRS):
             return False
-            
-        _, ext = os.path.splitext(file_path)
-        return ext.lower() in self.image_extensions
+
+        # Check the mimetype of the file using the file command
+        mimetype = mimetypes.guess_type(file_path)[0]
+        return mimetype and mimetype.startswith('image/')
         
     def _get_image_dimensions(self, file_path: str):
         """Get image dimensions and calculate a size score."""
@@ -37,12 +38,12 @@ class ImageHandler(FileSystemEventHandler):
         """Remove a file from the vector database."""
         try:
             # First find any entries that match this path
-            results = collection.get(
+            results = get_collection().get(
                 where={"file_path": file_path},
                 include=["metadatas", "documents", "embeddings"]
             )
             if results and results['ids']:
-                collection.delete(ids=results['ids'])
+                get_collection().delete(ids=results['ids'])
                 print(f"Removed from vector DB: {file_path}")
         except Exception as e:
             print(f"Error removing {file_path} from DB: {str(e)}")
@@ -73,16 +74,15 @@ class ImageHandler(FileSystemEventHandler):
                 
             # Add to collection with size information
             file_name = os.path.basename(file_path)
-            collection.add(
+            get_collection().upsert(
                 ids=[file_path],
                 embeddings=[embedding.tolist()],
                 metadatas=[{
-                    "file_name": file_name,
-                    "file_path": file_path,
+                    "file_path": os.path.abspath(file_path),
+                    "file_name": os.path.basename(file_path),
                     "width": width,
                     "height": height,
-                    "size_score": size_score,
-                    "last_modified": os.path.getmtime(file_path)
+                    "size_score": size_score
                 }]
             )
             print(f"Added to vector DB: {file_path} ({width}x{height})")
