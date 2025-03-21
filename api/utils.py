@@ -135,6 +135,7 @@ def encode_text_query(query):
         embedding /= embedding.norm(dim=-1, keepdim=True)  # Normalize
     return embedding.cpu().numpy().flatten()
 
+# TODO: figure out why the fuck only restarting the server fixes the issue
 def search_images(query, n_results=5):
     """Search with normalized embeddings and adjust ranking based on image size."""
     query_embedding = encode_text_query(query)
